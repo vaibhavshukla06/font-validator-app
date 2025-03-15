@@ -1,0 +1,137 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 221 83% 53%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 221 83% 53%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221 83% 53%;
+
+    --radius: 1rem;
+  }
+
+  * {
+    @apply border-border selection:bg-primary/20 selection:text-primary;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "ss01", "ss02", "cv01", "cv02", "cv03";
+    background-image: radial-gradient(
+      circle at 100% 0%, 
+      rgba(200, 220, 255, 0.2) 0%, 
+      rgba(200, 220, 255, 0) 50%
+    );
+    background-attachment: fixed;
+  }
+
+  .glass {
+    @apply bg-white/50 backdrop-blur-lg border border-white/20 shadow-md;
+  }
+
+  .glass-card {
+    @apply bg-white/80 backdrop-blur-md border border-white/30 shadow-lg transition-all duration-300 hover:shadow-xl hover:bg-white/90;
+  }
+
+  .upload-area {
+    @apply bg-white/70 backdrop-blur-sm border-2 border-dashed border-primary/30 transition-all duration-300 hover:border-primary/70;
+  }
+
+  .nav-glassmorphism {
+    @apply bg-white/70 backdrop-blur-xl border-b border-white/20 shadow-sm;
+  }
+
+  /* Analysis Results Page Styles */
+  .analysis-tab {
+    @apply text-lg font-medium py-3 px-6 rounded-t-lg transition-all duration-200;
+  }
+  
+  .analysis-tab.active {
+    @apply bg-primary text-white shadow-md;
+  }
+  
+  .analysis-tab:not(.active) {
+    @apply bg-white/60 text-foreground/80 hover:bg-white hover:text-primary;
+  }
+  
+  .viz-card {
+    @apply glass-card rounded-xl overflow-hidden hover:scale-[1.02] transition-all duration-300;
+  }
+  
+  .action-button {
+    @apply w-full glass-card flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-medium text-primary hover:bg-primary hover:text-white transition-all duration-200;
+  }
+  
+  /* Compare Fonts Page Styles */
+  .compare-section {
+    @apply glass-card rounded-xl p-6 mb-6;
+  }
+  
+  .compare-header {
+    @apply text-2xl font-bold mb-4 text-foreground;
+  }
+  
+  .font-upload-item {
+    @apply mb-4 p-4 bg-white/80 rounded-lg border border-border transition-all duration-200 hover:border-primary/50;
+  }
+
+  .compare-button {
+    @apply w-full bg-primary text-white py-3 rounded-xl font-medium transition-all duration-200 hover:bg-primary/90 flex items-center justify-center gap-2;
+  }
+  
+  .option-checkbox {
+    @apply flex items-center gap-3 p-3 rounded-lg hover:bg-white/80 transition-all duration-200;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  .animate-delay-100 {
+    animation-delay: 100ms;
+  }
+  
+  .animate-delay-200 {
+    animation-delay: 200ms;
+  }
+  
+  .animate-delay-300 {
+    animation-delay: 300ms;
+  }
+  
+  .animate-delay-400 {
+    animation-delay: 400ms;
+  }
+  
+  .animate-delay-500 {
+    animation-delay: 500ms;
+  }
+}
