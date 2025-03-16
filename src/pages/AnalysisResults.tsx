@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect, useRef } from 'react';
+import React, { useState, useContext, useEffect, useRef, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { BarChart3, FileType, Download, ArrowRight, Star, Info, FileBarChart } from 'lucide-react';
@@ -79,7 +79,8 @@ const characterProportionsData = [{
   fullMark: 100
 }];
 
-// Character set data
+// Character set data - This will now be replaced with real data from the font analysis
+// We'll keep this as a fallback
 const characterSetInfo = {
   latin: 'Complete (220 glyphs)',
   numerals: 'Proportional and Tabular',
@@ -88,10 +89,8 @@ const characterSetInfo = {
   languages: 'Latin-based (Western European)'
 };
 
-// OpenType features
-const openTypeFeatures = ['liga - Standard Ligatures', 'kern - Kerning', 'frac - Fractions', 'smcp - Small Capitals'];
-
-// Mock personality analysis
+// Mock personality analysis - This will be replaced with real data
+// Keeping as fallback
 const personalityAnalysis = "This font projects considerable formality and seriousness, has a welcoming and approachable quality, has a somewhat gentle character, exudes sophistication and elegance, has somewhat traditional characteristics, and has a touch of playfulness.";
 
 // Mock recommended use cases
@@ -140,70 +139,280 @@ const AnalysisResults = () => {
     }
   }, [fontFile, navigate, fontMetrics, setFontMetrics]);
 
+  // Define fontData before it's used in the useMemo hooks
+  const fontData = {
+    name: fontName || 'Unknown Font',
+    format: fontFile?.name.split('.').pop()?.toUpperCase() || 'Unknown',
+    style: fontMetrics?.style || 'serif',
+    weight: fontMetrics?.weight || 'Regular (400)',
+    width: fontMetrics?.width || 'Normal (5)'
+  };
+
+  // Generate real personality data for the chart if available
+  const realFontPersonalityData = useMemo(() => {
+    if (!fontMetrics?.personality) return fontPersonalityData;
+    
+    return [
+      {
+        trait: 'Formality',
+        value: fontMetrics.personality.formality
+      },
+      {
+        trait: 'Approachability',
+        value: fontMetrics.personality.approachability
+      },
+      {
+        trait: 'Gentleness',
+        value: fontMetrics.personality.gentleness
+      },
+      {
+        trait: 'Sophistication',
+        value: fontMetrics.personality.sophistication
+      },
+      {
+        trait: 'Traditionality',
+        value: fontMetrics.personality.traditionality
+      },
+      {
+        trait: 'Playfulness',
+        value: fontMetrics.personality.playfulness
+      }
+    ];
+  }, [fontMetrics]);
+  
+  // Generate real weight distribution data based on font weight
+  const realWeightDistributionData = useMemo(() => {
+    if (!fontMetrics?.weight) return weightDistributionData;
+    
+    // Extract weight class from the weight string (e.g., "Regular (400)" -> 400)
+    const weightMatch = fontMetrics.weight.match(/\((\d+)\)/);
+    const weightClass = weightMatch ? parseInt(weightMatch[1]) : 400;
+    
+    // Create a distribution centered around the actual weight
+    return [
+      {
+        name: 'Thin (100)',
+        weight: Math.max(5, 100 - Math.abs(weightClass - 100) / 8)
+      },
+      {
+        name: 'Light (300)',
+        weight: Math.max(5, 100 - Math.abs(weightClass - 300) / 8)
+      },
+      {
+        name: 'Regular (400)',
+        weight: Math.max(5, 100 - Math.abs(weightClass - 400) / 8)
+      },
+      {
+        name: 'Medium (500)',
+        weight: Math.max(5, 100 - Math.abs(weightClass - 500) / 8)
+      },
+      {
+        name: 'Bold (700)',
+        weight: Math.max(5, 100 - Math.abs(weightClass - 700) / 8)
+      },
+      {
+        name: 'Black (900)',
+        weight: Math.max(5, 100 - Math.abs(weightClass - 900) / 8)
+      }
+    ];
+  }, [fontMetrics]);
+  
+  // Generate real character proportions data based on font metrics
+  const realCharacterProportionsData = useMemo(() => {
+    if (!fontMetrics) return characterProportionsData;
+    
+    // Extract numeric values from metrics strings
+    const extractValue = (metricStr) => {
+      const match = metricStr?.match(/(\d+\.\d+)/);
+      return match ? parseFloat(match[1]) * 100 : 50; // Default to 50 if not found
+    };
+    
+    // Calculate contrast value (0-100)
+    const getContrastValue = (contrastStr) => {
+      if (!contrastStr) return 50;
+      if (contrastStr.includes('No')) return 10;
+      if (contrastStr.includes('Low')) return 30;
+      if (contrastStr.includes('Medium')) return 50;
+      if (contrastStr.includes('High')) return 80;
+      if (contrastStr.includes('Extreme')) return 95;
+      return 50;
+    };
+    
+    return [
+      {
+        subject: 'Ascender',
+        A: extractValue(fontMetrics.ascender),
+        fullMark: 100
+      },
+      {
+        subject: 'Descender',
+        A: extractValue(fontMetrics.descender),
+        fullMark: 100
+      },
+      {
+        subject: 'X-Height',
+        A: extractValue(fontMetrics.xHeight),
+        fullMark: 100
+      },
+      {
+        subject: 'Cap Height',
+        A: extractValue(fontMetrics.capHeight),
+        fullMark: 100
+      },
+      {
+        subject: 'Contrast',
+        A: getContrastValue(fontMetrics.contrast),
+        fullMark: 100
+      },
+      {
+        subject: 'Width',
+        A: fontMetrics.width ? parseInt(fontMetrics.width) * 10 : 50,
+        fullMark: 100
+      }
+    ];
+  }, [fontMetrics]);
+  
+  // Generate real font pairing recommendations based on font style and personality
+  const realFontPairings = useMemo(() => {
+    if (!fontMetrics) return fontPairings;
+    
+    // Extract font style from font data
+    const fontStyle = fontData.style || 'serif';
+    
+    // Get personality traits
+    const personality = fontMetrics.personality || {
+      formality: 50,
+      approachability: 50,
+      gentleness: 50,
+      sophistication: 50,
+      traditionality: 50,
+      playfulness: 50
+    };
+    
+    // Define font pairing database with categories
+    const fontPairingDatabase = {
+      serif: {
+        bodyText: ["Open Sans", "Roboto", "Lato", "Source Sans Pro"],
+        headings: ["Montserrat", "Raleway", "Poppins"],
+        ui: ["Roboto", "Inter", "Open Sans"]
+      },
+      "sans-serif": {
+        bodyText: ["Merriweather", "Georgia", "Lora", "PT Serif"],
+        headings: ["Playfair Display", "Libre Baskerville", "Crimson Text"],
+        ui: ["Roboto", "Open Sans", "Lato"]
+      },
+      script: {
+        bodyText: ["Montserrat", "Open Sans", "Roboto", "Lato"],
+        headings: ["Oswald", "Raleway", "Poppins"],
+        ui: ["Open Sans", "Roboto", "Source Sans Pro"]
+      },
+      decorative: {
+        bodyText: ["Roboto", "Open Sans", "Lato", "Source Sans Pro"],
+        headings: ["Montserrat", "Oswald", "Raleway"],
+        ui: ["Roboto", "Open Sans", "Inter"]
+      },
+      monospace: {
+        bodyText: ["Open Sans", "Roboto", "Source Sans Pro"],
+        headings: ["Montserrat", "Raleway", "Oswald"],
+        ui: ["Roboto", "Open Sans", "Lato"]
+      }
+    };
+    
+    // Select appropriate category based on font style
+    const category = fontPairingDatabase[fontStyle] || fontPairingDatabase.serif;
+    
+    // Select specific fonts based on personality traits
+    const recommendations = [];
+    
+    // For formal fonts, prefer more traditional pairings
+    if (personality.formality > 70) {
+      recommendations.push(`${category.bodyText[0]} (for body text)`);
+      recommendations.push(`${category.headings[0]} (for headings)`);
+    } 
+    // For playful fonts, prefer more modern pairings
+    else if (personality.playfulness > 70) {
+      recommendations.push(`${category.bodyText[1]} (for body text)`);
+      recommendations.push(`${category.headings[1]} (for complementary headings)`);
+    }
+    // For sophisticated fonts, prefer elegant pairings
+    else if (personality.sophistication > 70) {
+      recommendations.push(`${category.bodyText[2] || category.bodyText[0]} (for body text)`);
+      recommendations.push(`${category.headings[2] || category.headings[0]} (for elegant headings)`);
+    }
+    // Default recommendations
+    else {
+      recommendations.push(`${category.bodyText[0]} (for body text)`);
+      recommendations.push(`${category.ui[0]} (for UI elements)`);
+    }
+    
+    // Always add a UI recommendation if not already included
+    if (!recommendations.some(rec => rec.includes("UI elements"))) {
+      recommendations.push(`${category.ui[0]} (for UI elements)`);
+    }
+    
+    // Add a versatile option if we have less than 4 recommendations
+    if (recommendations.length < 4) {
+      recommendations.push(`${category.bodyText[3] || category.bodyText[0]} (for versatile use alongside)`);
+    }
+    
+    // Ensure we have at least 3 unique recommendations
+    return [...new Set(recommendations)].slice(0, 4);
+  }, [fontMetrics, fontData.style]);
+
   // Function to handle downloading all visualizations
   const handleDownloadVisualizations = async () => {
-    if (!visualizationsRef.current) {
-      toast.error('Could not find visualizations to download');
-      return;
-    }
+    if (!visualizationsRef.current) return;
+    
     try {
-      toast.info('Preparing visualizations for download...', {
-        description: 'This may take a few seconds'
-      });
+      toast.info('Preparing visualizations for download...');
+      
+      // Create a zip file
       const zip = new JSZip();
-      const chartElements = visualizationsRef.current.querySelectorAll('.visualization-chart');
-      if (chartElements.length === 0) {
-        toast.error('No visualizations found to download');
-        return;
-      }
-
-      // Convert each chart to canvas and add to zip
-      for (let i = 0; i < chartElements.length; i++) {
-        const chart = chartElements[i] as HTMLElement;
-        const canvas = await html2canvas(chart, {
-          backgroundColor: '#FFFFFF',
-          scale: 2 // Better quality
-        });
-
-        // Convert canvas to blob
+      
+      // Capture each visualization
+      const charts = visualizationsRef.current.querySelectorAll('.chart-container');
+      
+      for (let i = 0; i < charts.length; i++) {
+        const chart = charts[i];
+        const canvas = await html2canvas(chart as HTMLElement);
         const blob = await new Promise<Blob>(resolve => {
-          canvas.toBlob(blob => {
-            if (blob) resolve(blob);else resolve(new Blob([''], {
-              type: 'image/png'
-            }));
-          }, 'image/png');
+          canvas.toBlob(blob => resolve(blob as Blob), 'image/png');
         });
-
-        // Add to zip
-        const chartName = chart.getAttribute('data-name') || `chart-${i + 1}`;
-        zip.file(`${fontName || 'font'}-${chartName}.png`, blob);
+        
+        zip.file(`chart-${i+1}.png`, blob);
       }
-
+      
       // Generate and download the zip file
-      const content = await zip.generateAsync({
-        type: 'blob'
-      });
+      const content = await zip.generateAsync({type: 'blob'});
       saveAs(content, `${fontName || 'font'}-visualizations.zip`);
-      toast.success('All visualizations downloaded successfully', {
-        description: 'Visualizations have been saved to your downloads folder',
-        position: 'bottom-right'
-      });
+      
+      toast.success('Visualizations downloaded successfully!');
     } catch (error) {
       console.error('Error downloading visualizations:', error);
-      toast.error('Failed to download visualizations', {
-        description: 'An unexpected error occurred'
-      });
+      toast.error('Failed to download visualizations');
+    }
+  };
+  
+  // Function to handle downloading the full report
+  const handleDownloadReport = async () => {
+    if (!reportRef.current) return;
+    
+    try {
+      toast.info('Preparing report for download...');
+      
+      const canvas = await html2canvas(reportRef.current);
+      canvas.toBlob(blob => {
+        if (blob) {
+          saveAs(blob, `${fontName || 'font'}-analysis-report.png`);
+          toast.success('Report downloaded successfully!');
+        }
+      }, 'image/png');
+    } catch (error) {
+      console.error('Error downloading report:', error);
+      toast.error('Failed to download report');
     }
   };
 
-  // Font data
-  const fontData = {
-    name: fontName || 'Font Analysis',
-    format: fontFile?.name.endsWith('.ttf') ? 'TrueType' : fontFile?.name.endsWith('.otf') ? 'OpenType' : fontFile?.name.endsWith('.woff') ? 'WOFF' : fontFile?.name.endsWith('.woff2') ? 'WOFF2' : 'Unknown',
-    style: 'serif',
-    weight: 'Regular (400)',
-    width: 'Normal (5)'
-  };
   const containerVariants = {
     hidden: {
       opacity: 0
@@ -348,43 +557,28 @@ const AnalysisResults = () => {
                       <div className="grid grid-cols-2 gap-4">
                         <div className="flex justify-between">
                           <span className="text-gray-500">Latin:</span>
-                          <span className="font-medium">{characterSetInfo.latin}</span>
+                          <span className="font-medium">{fontMetrics?.characterSet?.latin || characterSetInfo.latin}</span>
                         </div>
                         
                         <div className="flex justify-between">
                           <span className="text-gray-500">Numerals:</span>
-                          <span className="font-medium">{characterSetInfo.numerals}</span>
+                          <span className="font-medium">{fontMetrics?.characterSet?.numerals || characterSetInfo.numerals}</span>
                         </div>
                         
                         <div className="flex justify-between">
                           <span className="text-gray-500">Symbols:</span>
-                          <span className="font-medium">{characterSetInfo.symbols}</span>
+                          <span className="font-medium">{fontMetrics?.characterSet?.symbols || characterSetInfo.symbols}</span>
                         </div>
                         
                         <div className="flex justify-between">
                           <span className="text-gray-500">Punctuation:</span>
-                          <span className="font-medium">{characterSetInfo.punctuation}</span>
+                          <span className="font-medium">{fontMetrics?.characterSet?.punctuation || characterSetInfo.punctuation}</span>
                         </div>
                         
                         <div className="col-span-2 flex justify-between">
                           <span className="text-gray-500">Languages:</span>
-                          <span className="font-medium">{characterSetInfo.languages}</span>
+                          <span className="font-medium">{fontMetrics?.characterSet?.languages || characterSetInfo.languages}</span>
                         </div>
-                      </div>
-                    </div>
-                    
-                    {/* OpenType Features */}
-                    <div className="px-8 py-6 border-b">
-                      <div className="flex items-center gap-2 mb-4">
-                        <FileType className="w-5 h-5 text-blue-500" />
-                        <h3 className="text-xl font-semibold text-gray-800">OpenType Features</h3>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-3">
-                        {openTypeFeatures.map((feature, index) => <div key={index} className="flex items-center gap-2">
-                            <div className="h-2 w-2 rounded-full bg-blue-500"></div>
-                            <span>{feature}</span>
-                          </div>)}
                       </div>
                     </div>
                     
@@ -396,7 +590,7 @@ const AnalysisResults = () => {
                       </div>
                       
                       <p className="italic text-gray-600">
-                        {personalityAnalysis}
+                        {fontMetrics?.personality?.emotionalDescription || personalityAnalysis}
                       </p>
                     </div>
                     
@@ -412,7 +606,7 @@ const AnalysisResults = () => {
                       </p>
                       
                       <div className="grid grid-cols-2 gap-3">
-                        {fontPairings.map((font, index) => <div key={index} className="flex items-center gap-2">
+                        {(fontMetrics?.fontPairings || realFontPairings).map((font, index) => <div key={index} className="flex items-center gap-2">
                             <div className="h-2 w-2 rounded-full bg-green-500"></div>
                             <span>{font}</span>
                           </div>)}
@@ -475,6 +669,11 @@ const AnalysisResults = () => {
                   <div className="space-y-4">
                     <h3 className="text-xl font-semibold text-gray-800 mb-4">Actions</h3>
                     
+                    <Button variant="outline" onClick={handleDownloadReport} className="w-full flex items-center justify-center gap-2 py-6 text-base">
+                      <Download className="w-5 h-5" />
+                      Download Full Report
+                    </Button>
+                    
                     <Button variant="outline" onClick={handleDownloadVisualizations} className="w-full flex items-center justify-center gap-2 py-6 text-base">
                       <Download className="w-5 h-5" />
                       Download All Visualizations
@@ -506,17 +705,20 @@ const AnalysisResults = () => {
                       <CardContent className="pt-0">
                         <div className="h-[300px] w-full">
                           <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={fontPersonalityData} margin={{
-                            top: 20,
-                            right: 30,
-                            left: 20,
-                            bottom: 5
-                          }}>
+                            <BarChart
+                              data={realFontPersonalityData}
+                              margin={{
+                                top: 20,
+                                right: 30,
+                                left: 20,
+                                bottom: 5,
+                              }}
+                            >
                               <CartesianGrid strokeDasharray="3 3" />
                               <XAxis dataKey="trait" />
-                              <YAxis />
+                              <YAxis domain={[0, 100]} />
                               <Tooltip />
-                              <Bar dataKey="value" fill="#4f46e5" />
+                              <Bar dataKey="value" fill="#3b82f6" />
                             </BarChart>
                           </ResponsiveContainer>
                         </div>
@@ -531,7 +733,7 @@ const AnalysisResults = () => {
                       <CardContent className="pt-0">
                         <div className="h-[300px] w-full">
                           <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={weightDistributionData} margin={{
+                            <BarChart data={realWeightDistributionData} margin={{
                             top: 20,
                             right: 30,
                             left: 20,
@@ -556,7 +758,7 @@ const AnalysisResults = () => {
                       <CardContent className="pt-0">
                         <div className="h-[300px] w-full">
                           <ResponsiveContainer width="100%" height="100%">
-                            <RadarChart cx="50%" cy="50%" outerRadius="80%" data={characterProportionsData}>
+                            <RadarChart cx="50%" cy="50%" outerRadius="80%" data={realCharacterProportionsData}>
                               <PolarGrid />
                               <PolarAngleAxis dataKey="subject" />
                               <PolarRadiusAxis angle={30} domain={[0, 100]} />
@@ -606,6 +808,11 @@ const AnalysisResults = () => {
                   {/* Actions */}
                   <div className="space-y-4">
                     <h3 className="text-xl font-semibold text-gray-800 mb-4">Actions</h3>
+                    
+                    <Button variant="outline" onClick={handleDownloadReport} className="w-full flex items-center justify-center gap-2 py-6 text-base">
+                      <Download className="w-5 h-5" />
+                      Download Full Report
+                    </Button>
                     
                     <Button variant="outline" onClick={handleDownloadVisualizations} className="w-full flex items-center justify-center gap-2 py-6 text-base">
                       <Download className="w-5 h-5" />

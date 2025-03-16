@@ -1,4 +1,3 @@
-
 import { createContext, useState, ReactNode } from "react";
 
 interface FontPersonality {
@@ -8,6 +7,15 @@ interface FontPersonality {
   sophistication: number;
   traditionality: number;
   playfulness: number;
+  emotionalDescription?: string;
+}
+
+interface CharacterSet {
+  latin: string;
+  numerals: string;
+  symbols: string;
+  punctuation: string;
+  languages: string;
 }
 
 export interface FontMetrics {
@@ -22,6 +30,10 @@ export interface FontMetrics {
   recommendedUses?: string[];
   notRecommendedUses?: string[];
   fontPairings?: string[];
+  characterSet?: CharacterSet;
+  weight?: string;
+  width?: string;
+  style?: string;
 }
 
 interface FontContextProps {

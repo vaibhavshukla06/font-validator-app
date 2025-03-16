@@ -4,13 +4,15 @@ import { Button } from "@/components/ui/button";
 import { ChevronRight, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { FontContext } from "@/contexts/FontContext";
+import { useFontAnalysis } from "@/hooks/useFontAnalysis";
 import { toast } from "sonner";
 
 const AnalysisOptions = () => {
   const navigate = useNavigate();
   const { fontFile } = useContext(FontContext);
+  const { analyzeFontAsync, isAnalyzing } = useFontAnalysis();
 
-  const handleAnalyze = () => {
+  const handleAnalyze = async () => {
     if (!fontFile) {
       toast.error("Please upload a font file first", {
         description: "You need to upload a valid font file before analysis",
@@ -18,17 +20,13 @@ const AnalysisOptions = () => {
       return;
     }
     
-    // Simulate font analysis (in a real app, this would perform actual analysis)
-    toast.success("Font analysis started", {
-      description: "Analyzing font characteristics...",
-    });
+    // Perform actual font analysis using our hook
+    const success = await analyzeFontAsync();
     
-    // In a real implementation, you would process the font here
-    // and then navigate with the results
-    setTimeout(() => {
-      // Navigate to results page after "analysis" is complete
+    if (success) {
+      // Navigate to results page after analysis is complete
       navigate("/analysis-results");
-    }, 1500);
+    }
   };
 
   return (
@@ -47,10 +45,20 @@ const AnalysisOptions = () => {
         <Button 
           className="w-full py-6 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-base font-medium flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all"
           onClick={handleAnalyze}
+          disabled={isAnalyzing}
         >
-          <Zap className="w-5 h-5" />
-          Analyze Font
-          <ChevronRight className="w-4 h-4 ml-1" />
+          {isAnalyzing ? (
+            <>
+              <span className="animate-spin mr-2">⏳</span>
+              Analyzing...
+            </>
+          ) : (
+            <>
+              <Zap className="w-5 h-5" />
+              Analyze Font
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </>
+          )}
         </Button>
       </motion.div>
     </motion.div>
