@@ -110,6 +110,21 @@ const AnalysisResults = () => {
   const navigate = useNavigate();
   const visualizationsRef = useRef<HTMLDivElement>(null);
   const reportRef = useRef<HTMLDivElement>(null);
+  const [fontUrl, setFontUrl] = useState<string | null>(null);
+  const fontFamilyName = useMemo(() => `uploaded-font-${fontName?.replace(/\s+/g, '-') || 'unknown'}`, [fontName]);
+
+  // Create a URL for the uploaded font file
+  useEffect(() => {
+    if (fontFile) {
+      const url = URL.createObjectURL(fontFile);
+      setFontUrl(url);
+      
+      // Clean up the URL when component unmounts
+      return () => {
+        URL.revokeObjectURL(url);
+      };
+    }
+  }, [fontFile]);
 
   // Redirect if no font file is uploaded
   useEffect(() => {
@@ -438,6 +453,20 @@ const AnalysisResults = () => {
     }
   };
   return <div className="min-h-screen pb-20">
+      {/* Add dynamic @font-face style */}
+      {fontUrl && (
+        <style>
+          {`
+            @font-face {
+              font-family: "${fontFamilyName}";
+              src: url(${fontUrl}) format("${fontFile?.name.endsWith('.otf') ? 'opentype' : 'truetype'}");
+              font-weight: normal;
+              font-style: normal;
+            }
+          `}
+        </style>
+      )}
+      
       <Navbar />
       
       <main className="container mx-auto px-4 pt-20">
@@ -621,8 +650,8 @@ const AnalysisResults = () => {
                       </div>
                       
                       <div className="rounded-lg bg-gray-50 p-6" style={{
-                      fontFamily: fontName
-                    }}>
+                        fontFamily: fontUrl ? fontFamilyName : 'inherit'
+                      }}>
                         <p className="text-3xl mb-3">ABCDEFGHIJKLM</p>
                         <p className="text-3xl mb-5">abcdefghijklm</p>
                         <p className="text-xl mb-3">The quick brown fox jumps over the lazy dog.</p>
@@ -672,11 +701,6 @@ const AnalysisResults = () => {
                     <Button variant="outline" onClick={handleDownloadReport} className="w-full flex items-center justify-center gap-2 py-6 text-base">
                       <Download className="w-5 h-5" />
                       Download Full Report
-                    </Button>
-                    
-                    <Button variant="outline" onClick={handleDownloadVisualizations} className="w-full flex items-center justify-center gap-2 py-6 text-base">
-                      <Download className="w-5 h-5" />
-                      Download All Visualizations
                     </Button>
                     
                     <Link to="/compare" className="block w-full">
@@ -769,6 +793,23 @@ const AnalysisResults = () => {
                         </div>
                       </CardContent>
                     </Card>
+
+                    {/* Font Sample */}
+                    <Card className="shadow-md visualization-chart lg:col-span-2" data-name="font-sample">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-lg">Font Sample</CardTitle>
+                      </CardHeader>
+                      <CardContent className="pt-0">
+                        <div className="rounded-lg bg-gray-50 p-6" style={{
+                          fontFamily: fontUrl ? fontFamilyName : 'inherit'
+                        }}>
+                          <p className="text-3xl mb-3">ABCDEFGHIJKLM</p>
+                          <p className="text-3xl mb-5">abcdefghijklm</p>
+                          <p className="text-xl mb-3">The quick brown fox jumps over the lazy dog.</p>
+                          <p className="text-lg">0123456789 !@#$%^&*()</p>
+                        </div>
+                      </CardContent>
+                    </Card>
                   </div>
                 </div>
               </ResizablePanel>
@@ -812,11 +853,6 @@ const AnalysisResults = () => {
                     <Button variant="outline" onClick={handleDownloadReport} className="w-full flex items-center justify-center gap-2 py-6 text-base">
                       <Download className="w-5 h-5" />
                       Download Full Report
-                    </Button>
-                    
-                    <Button variant="outline" onClick={handleDownloadVisualizations} className="w-full flex items-center justify-center gap-2 py-6 text-base">
-                      <Download className="w-5 h-5" />
-                      Download All Visualizations
                     </Button>
                     
                     <Link to="/compare" className="block w-full">
