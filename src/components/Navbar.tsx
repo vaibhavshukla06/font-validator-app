@@ -1,4 +1,3 @@
-
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { FileType, Home } from "lucide-react";
@@ -30,6 +29,12 @@ const Navbar = () => {
         <Link 
           to="/compare" 
           className="flex items-center space-x-1 text-sm font-medium text-foreground/80 hover:text-primary transition-colors"
+          onClick={(e) => {
+            // If we're already on the /compare route, prevent default behavior to avoid reset
+            if (window.location.pathname === '/compare') {
+              e.preventDefault();
+            }
+          }}
         >
           <span>Compare Fonts</span>
         </Link>

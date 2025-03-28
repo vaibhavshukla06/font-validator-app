@@ -395,12 +395,14 @@ function analyzeFontPersonality(fontStyle, fontMetrics) {
   
   // Adjust based on x-height
   const xHeight = parseFloat(fontMetrics.xHeight);
-  if (xHeight > 0.6) {
-    approachability += 10;
-    formality -= 5;
-  } else if (xHeight < 0.4) {
-    sophistication += 10;
-    formality += 5;
+  if (!isNaN(xHeight)) {
+    if (xHeight > 0.6) {
+      approachability += 10;
+      formality -= 5;
+    } else if (xHeight < 0.4) {
+      sophistication += 10;
+      formality += 5;
+    }
   }
   
   // Adjust based on contrast
@@ -411,22 +413,67 @@ function analyzeFontPersonality(fontStyle, fontMetrics) {
   } else if (fontMetrics.contrast.includes('No')) {
     approachability += 10;
     traditionality -= 10;
+  } else if (fontMetrics.contrast.includes('Medium')) {
+    sophistication += 5;
+    approachability += 5;
   }
   
   // Adjust based on stroke terminals
   if (fontMetrics.strokeTerminals === 'Rounded') {
     gentleness += 15;
     approachability += 10;
+    playfulness += 5;
   } else if (fontMetrics.strokeTerminals === 'Pointed') {
     sophistication += 10;
     gentleness -= 10;
+    formality += 5;
   } else if (fontMetrics.strokeTerminals === 'Square') {
     formality += 10;
     gentleness -= 5;
+    traditionality += 5;
+  } else if (fontMetrics.strokeTerminals === 'Flared') {
+    sophistication += 15;
+    playfulness += 5;
+    traditionality += 5;
   }
   
+  // Adjust based on overall shape description
+  if (fontMetrics.shape.includes('large x-height')) {
+    approachability += 10;
+    traditionality -= 5;
+    playfulness += 5;
+  } else if (fontMetrics.shape.includes('small x-height')) {
+    sophistication += 10;
+    traditionality += 5;
+    playfulness -= 5;
+  } else if (fontMetrics.shape.includes('tall ascenders')) {
+    sophistication += 5;
+    formality += 5;
+    gentleness += 5;
+  } else if (fontMetrics.shape.includes('deep descenders')) {
+    sophistication += 5;
+    playfulness += 5;
+  }
+  
+  // Add variance based on font metrics to ensure different fonts get different personality values
+  // Create a hash from font metrics measurements
+  const metricsSum = xHeight * 100 + 
+                     parseFloat(fontMetrics.capHeight) * 200 + 
+                     parseFloat(fontMetrics.ascender) * 300 + 
+                     parseFloat(fontMetrics.descender) * 400;
+  
+  // Use the hash to add small variations to each personality trait
+  const hash = Math.abs(Math.round(metricsSum * 1000)) % 100;
+  
+  formality += (hash % 10) - 5;       // -5 to +4
+  approachability += ((hash + 3) % 10) - 5;
+  gentleness += ((hash + 7) % 10) - 5;
+  sophistication += ((hash + 13) % 10) - 5;
+  traditionality += ((hash + 19) % 10) - 5;
+  playfulness += ((hash + 23) % 10) - 5;
+  
   // Ensure values are within 0-100 range
-  const clamp = (value) => Math.max(0, Math.min(100, value));
+  const clamp = (value) => Math.max(0, Math.min(100, Math.round(value)));
   
   const personalityTraits = {
     formality: clamp(formality),
@@ -438,7 +485,7 @@ function analyzeFontPersonality(fontStyle, fontMetrics) {
   };
   
   // Generate emotional description based on personality traits
-  const emotionalDescription = generateEmotionalDescription(personalityTraits);
+  const emotionalDescription = generateCustomEmotionalDescription(personalityTraits, fontStyle, fontMetrics);
   
   return {
     ...personalityTraits,
@@ -447,7 +494,128 @@ function analyzeFontPersonality(fontStyle, fontMetrics) {
 }
 
 /**
+ * Generates a custom human-readable description of the font's personality
+ * @param {Object} personality - Font personality traits (0-100 scale)
+ * @param {string} fontStyle - Font style
+ * @param {Object} fontMetrics - Font metrics
+ * @returns {string} - Human-readable description
+ */
+function generateCustomEmotionalDescription(personality, fontStyle, fontMetrics) {
+  // Extract most notable traits (highest and lowest values)
+  const traits = Object.entries(personality).sort((a, b) => b[1] - a[1]);
+  const highestTrait = traits[0];
+  const lowestTrait = traits[traits.length - 1];
+  
+  // Generate style-based description
+  let styleDesc = "";
+  switch (fontStyle) {
+    case 'serif':
+      styleDesc = "With its classic serif details, this font ";
+      break;
+    case 'sans-serif':
+      styleDesc = "This modern sans-serif font ";
+      break;
+    case 'script':
+      styleDesc = "With its flowing script characteristics, this font ";
+      break;
+    case 'decorative':
+      styleDesc = "As a decorative design, this font ";
+      break;
+    case 'monospace':
+      styleDesc = "With its uniform character widths, this monospace font ";
+      break;
+    default:
+      styleDesc = "This font ";
+  }
+  
+  // Add contrast description
+  let contrastDesc = "";
+  if (fontMetrics.contrast.includes('High')) {
+    contrastDesc = "has dramatic contrast between thick and thin strokes, which ";
+  } else if (fontMetrics.contrast.includes('No')) {
+    contrastDesc = "maintains even stroke weight throughout, which ";
+  } else if (fontMetrics.contrast.includes('Medium')) {
+    contrastDesc = "shows moderate contrast in its strokes, which ";
+  }
+  
+  // Add terminal description
+  let terminalDesc = "";
+  if (fontMetrics.strokeTerminals === 'Rounded') {
+    terminalDesc = "features soft, rounded terminals that ";
+  } else if (fontMetrics.strokeTerminals === 'Pointed') {
+    terminalDesc = "has sharp, pointed terminals that ";
+  } else if (fontMetrics.strokeTerminals === 'Square') {
+    terminalDesc = "uses solid, square terminals that ";
+  } else if (fontMetrics.strokeTerminals === 'Flared') {
+    terminalDesc = "incorporates elegantly flared terminals that ";
+  }
+  
+  // Add description based on highest personality trait
+  let highTraitDesc = "";
+  if (highestTrait[0] === 'formality' && highestTrait[1] > 70) {
+    highTraitDesc = "appears quite formal and structured, suitable for professional contexts";
+  } else if (highestTrait[0] === 'approachability' && highestTrait[1] > 70) {
+    highTraitDesc = "feels friendly and approachable, putting readers at ease";
+  } else if (highestTrait[0] === 'gentleness' && highestTrait[1] > 70) {
+    highTraitDesc = "conveys a gentle and soft impression with balanced forms";
+  } else if (highestTrait[0] === 'sophistication' && highestTrait[1] > 70) {
+    highTraitDesc = "exudes sophistication and elegance through its refined proportions";
+  } else if (highestTrait[0] === 'traditionality' && highestTrait[1] > 70) {
+    highTraitDesc = "embraces traditional typographic principles with a classical feel";
+  } else if (highestTrait[0] === 'playfulness' && highestTrait[1] > 70) {
+    highTraitDesc = "has a playful and energetic character that adds personality to text";
+  } else {
+    // If highest trait isn't very high, use metrics instead
+    if (fontMetrics.shape.includes('large x-height')) {
+      highTraitDesc = "offers excellent readability with its large x-height and open forms";
+    } else if (fontMetrics.shape.includes('small x-height')) {
+      highTraitDesc = "creates an elegant appearance with its modest x-height and refined proportions";
+    } else if (fontMetrics.shape.includes('tall ascenders')) {
+      highTraitDesc = "features distinctive tall ascenders that create vertical rhythm and elegance";
+    } else if (fontMetrics.shape.includes('deep descenders')) {
+      highTraitDesc = "uses pronounced descenders that add character and distinctiveness";
+    } else {
+      highTraitDesc = "balances various typographic qualities for versatile use";
+    }
+  }
+  
+  // Add low trait description as a contrast if it's notably low
+  let lowTraitDesc = "";
+  if (lowestTrait[1] < 30) {
+    if (lowestTrait[0] === 'formality') {
+      lowTraitDesc = " while maintaining a relaxed, casual atmosphere";
+    } else if (lowestTrait[0] === 'approachability') {
+      lowTraitDesc = " while projecting a sense of authority and distance";
+    } else if (lowestTrait[0] === 'gentleness') {
+      lowTraitDesc = " with strong, confident strokes that command attention";
+    } else if (lowestTrait[0] === 'sophistication') {
+      lowTraitDesc = " with a straightforward, functional approach to typography";
+    } else if (lowestTrait[0] === 'traditionality') {
+      lowTraitDesc = " with a contemporary aesthetic that breaks from convention";
+    } else if (lowestTrait[0] === 'playfulness') {
+      lowTraitDesc = " with a serious tone that prioritizes clarity and professionalism";
+    }
+  }
+  
+  // Construct the final description
+  let description = styleDesc;
+  
+  // Add either contrast or terminal description, but not both (avoid wordiness)
+  if (Math.random() > 0.5 && contrastDesc) {
+    description += contrastDesc;
+  } else if (terminalDesc) {
+    description += terminalDesc;
+  }
+  
+  description += highTraitDesc + lowTraitDesc + ".";
+  
+  // Replace double spaces if any
+  return description.replace(/\s\s+/g, ' ');
+}
+
+/**
  * Generates a human-readable description of the font's personality
+ * This original function is kept for compatibility, but we now use the custom version above
  * @param {Object} personality - Font personality traits (0-100 scale)
  * @returns {string} - Human-readable description
  */
@@ -549,17 +717,15 @@ function generateRecommendations(fontStyle, fontMetrics, fontPersonality) {
   const notRecommendedUses = [];
   const fontPairings = [];
   
-  // Generate recommendations based on font style
+  // Base recommendations on font style
   if (fontStyle === 'serif') {
     recommendedUses.push(
       "Business documents and presentations",
-      "Formal invitations",
       "Book covers and interior text",
       "Academic publications"
     );
     
     notRecommendedUses.push(
-      "Children's publications",
       "Casual social media content",
       "Mobile interfaces requiring compact text",
       "Display text at very small sizes"
@@ -574,15 +740,13 @@ function generateRecommendations(fontStyle, fontMetrics, fontPersonality) {
     recommendedUses.push(
       "Website and mobile interfaces",
       "Corporate branding",
-      "Information displays",
-      "Modern publications"
+      "Information displays"
     );
     
     notRecommendedUses.push(
       "Traditional formal documents",
       "Luxury brand materials",
-      "Classical literature",
-      "Wedding invitations"
+      "Classical literature"
     );
     
     fontPairings.push(
@@ -594,15 +758,13 @@ function generateRecommendations(fontStyle, fontMetrics, fontPersonality) {
     recommendedUses.push(
       "Wedding invitations",
       "Certificates",
-      "Luxury branding",
-      "Greeting cards"
+      "Luxury branding"
     );
     
     notRecommendedUses.push(
       "Long-form body text",
       "User interfaces",
-      "Technical documentation",
-      "Small size text"
+      "Technical documentation"
     );
     
     fontPairings.push(
@@ -614,15 +776,13 @@ function generateRecommendations(fontStyle, fontMetrics, fontPersonality) {
     recommendedUses.push(
       "Headlines and titles",
       "Posters and banners",
-      "Logo design",
-      "Short promotional text"
+      "Logo design"
     );
     
     notRecommendedUses.push(
       "Body text",
       "Legal documents",
-      "Technical content",
-      "Mobile interfaces"
+      "Technical content"
     );
     
     fontPairings.push(
@@ -634,15 +794,13 @@ function generateRecommendations(fontStyle, fontMetrics, fontPersonality) {
     recommendedUses.push(
       "Code displays",
       "Technical documentation",
-      "Tabular data",
-      "Terminal interfaces"
+      "Tabular data"
     );
     
     notRecommendedUses.push(
       "Long-form reading",
       "Elegant branding",
-      "Flowing text layouts",
-      "Artistic typography"
+      "Flowing text layouts"
     );
     
     fontPairings.push(
@@ -652,37 +810,152 @@ function generateRecommendations(fontStyle, fontMetrics, fontPersonality) {
     );
   }
   
+  // Modify recommendations based on x-height
+  const xHeight = parseFloat(fontMetrics.xHeight);
+  if (!isNaN(xHeight)) {
+    if (xHeight > 0.6) {
+      recommendedUses.push("Small text sizes", "Mobile applications", "Accessibility-focused designs");
+      if (!notRecommendedUses.includes("Traditional formal documents")) {
+        notRecommendedUses.push("Traditional formal documents");
+      }
+    } else if (xHeight < 0.4) {
+      recommendedUses.push("Display typography", "Formal invitations", "Luxury branding");
+      notRecommendedUses.push("User interfaces with limited space", "Body text below 12pt");
+    }
+  }
+  
+  // Modify recommendations based on contrast
+  if (fontMetrics.contrast.includes('High')) {
+    recommendedUses.push("Magazine layouts", "Fashion publications", "Luxury product packaging");
+    notRecommendedUses.push("Small text on screens", "Low-resolution displays");
+  } else if (fontMetrics.contrast.includes('No')) {
+    recommendedUses.push("Digital interfaces", "Wayfinding signage", "Text for small screens");
+    notRecommendedUses.push("Traditional book typography", "Formal certificates");
+  }
+  
+  // Modify recommendations based on stroke terminals
+  if (fontMetrics.strokeTerminals === 'Rounded') {
+    recommendedUses.push("Children's content", "Friendly communications", "Educational materials");
+  } else if (fontMetrics.strokeTerminals === 'Pointed') {
+    recommendedUses.push("Fashion branding", "Luxury products", "Editorial design");
+  } else if (fontMetrics.strokeTerminals === 'Square') {
+    recommendedUses.push("Corporate communications", "Technical documentation", "Informational displays");
+  }
+  
+  // Modify recommendations based on shape description
+  if (fontMetrics.shape.includes('large x-height')) {
+    recommendedUses.push("User interfaces", "Mobile applications", "Wayfinding signage");
+  } else if (fontMetrics.shape.includes('tall ascenders')) {
+    recommendedUses.push("Magazine headlines", "Book titles", "Elegant branding");
+    notRecommendedUses.push("Tight line spacing layouts", "Mobile UI with space constraints");
+  } else if (fontMetrics.shape.includes('deep descenders')) {
+    recommendedUses.push("Editorial design", "Pull quotes", "Distinctive headlines");
+    notRecommendedUses.push("Designs with minimal line spacing", "Compact layouts");
+  }
+  
   // Adjust recommendations based on personality
   if (fontPersonality.formality > 70) {
-    recommendedUses.push("Formal business communications");
-    recommendedUses.push("Legal documents");
+    recommendedUses.push("Formal business communications", "Legal documents", "Government publications");
+    notRecommendedUses.push("Casual social media", "Children's books", "Friendly marketing materials");
+  } else if (fontPersonality.formality < 30) {
+    recommendedUses.push("Casual blogs", "Social media content", "Friendly marketing");
+    notRecommendedUses.push("Legal documents", "Academic publications", "Formal business reports");
   }
   
   if (fontPersonality.playfulness > 70) {
-    recommendedUses.push("Children's content");
-    recommendedUses.push("Casual social media");
-    notRecommendedUses.push("Legal documents");
-    notRecommendedUses.push("Financial reports");
+    recommendedUses.push("Children's content", "Entertainment brands", "Casual social media");
+    notRecommendedUses.push("Legal documents", "Financial reports", "Medical publications");
+  } else if (fontPersonality.playfulness < 30) {
+    recommendedUses.push("Financial reports", "Technical documentation", "Research papers");
+    notRecommendedUses.push("Children's content", "Entertainment brands", "Casual blogging");
   }
   
   if (fontPersonality.sophistication > 70) {
-    recommendedUses.push("Luxury branding");
-    recommendedUses.push("High-end publications");
+    recommendedUses.push("Luxury branding", "High-end publications", "Art and culture magazines");
+    notRecommendedUses.push("Technical manuals", "Casual communications", "Budget-friendly marketing");
+  } else if (fontPersonality.sophistication < 30) {
+    recommendedUses.push("Technical manuals", "Utilitarian designs", "Information-focused content");
+    notRecommendedUses.push("Luxury branding", "Fashion magazines", "Premium marketing");
   }
   
   if (fontPersonality.approachability > 70) {
-    recommendedUses.push("Educational materials");
-    recommendedUses.push("Healthcare communications");
+    recommendedUses.push("Educational materials", "Healthcare communications", "Customer-facing content");
+    notRecommendedUses.push("High-security communications", "Legal warnings", "Authoritative messaging");
+  } else if (fontPersonality.approachability < 30) {
+    recommendedUses.push("Security notices", "Warning messages", "Authoritative communications");
+    notRecommendedUses.push("Education for young children", "Community outreach", "Friendly marketing");
   }
   
-  // Remove duplicates
-  const uniqueRecommendedUses = [...new Set(recommendedUses)];
-  const uniqueNotRecommendedUses = [...new Set(notRecommendedUses)];
+  // Generate font pairings based on style and personality
+  // Add more variety by using personality traits to influence pairings
+  if (fontPersonality.sophistication > 65) {
+    fontPairings.push("Baskerville (for elegant body text)", "Didot (for high-contrast headings)");
+  } else if (fontPersonality.approachability > 65) {
+    fontPairings.push("Nunito (for friendly headlines)", "Quicksand (for approachable UI elements)");
+  } else if (fontPersonality.formality > 65) {
+    fontPairings.push("Garamond (for traditional text)", "Bodoni (for formal headings)");
+  } else if (fontPersonality.playfulness > 65) {
+    fontPairings.push("Comic Neue (for casual text)", "Marker Felt (for playful highlights)");
+  }
+  
+  // Add variety based on metrics to ensure different fonts get different recommendations
+  // Create a fingerprint from the font metrics
+  const metricsFingerprint = (
+    parseFloat(fontMetrics.xHeight) * 100 + 
+    parseFloat(fontMetrics.capHeight) * 200 + 
+    parseFloat(fontMetrics.ascender) * 300 + 
+    parseFloat(fontMetrics.descender) * 400
+  );
+  
+  // Use the fingerprint to select additional recommendations
+  const uniqueRecommendations = [
+    "Editorial design", "Branding and identity", "User experience design",
+    "Product packaging", "Signage systems", "Data visualization",
+    "Email templates", "Social media graphics", "Presentation slides",
+    "App interfaces", "Video subtitles", "Book covers",
+    "Event materials", "Restaurant menus", "Marketing collateral",
+    "Annual reports", "Digital advertisements", "Print brochures"
+  ];
+  
+  const uniqueNonRecommendations = [
+    "Emergency signage", "Medical instructions", "Financial disclaimers",
+    "Legal contracts", "Academic papers", "Technical manuals",
+    "Educational flashcards", "Children's books", "Comic strips",
+    "Navigation systems", "Code editors", "Stock tickers",
+    "Data tables", "Mathematical formulas", "Bibliography listings"
+  ];
+  
+  // Select 1-2 additional unique recommendations based on the fingerprint
+  const fpIndex1 = Math.abs(Math.round(metricsFingerprint * 100)) % uniqueRecommendations.length;
+  const fpIndex2 = Math.abs(Math.round(metricsFingerprint * 200)) % uniqueRecommendations.length;
+  
+  if (fpIndex1 !== fpIndex2) {
+    recommendedUses.push(uniqueRecommendations[fpIndex1]);
+    recommendedUses.push(uniqueRecommendations[fpIndex2]);
+  } else {
+    recommendedUses.push(uniqueRecommendations[fpIndex1]);
+  }
+  
+  // Select 1-2 additional unique non-recommendations based on the fingerprint
+  const fpNonIndex1 = Math.abs(Math.round(metricsFingerprint * 300)) % uniqueNonRecommendations.length;
+  const fpNonIndex2 = Math.abs(Math.round(metricsFingerprint * 400)) % uniqueNonRecommendations.length;
+  
+  if (fpNonIndex1 !== fpNonIndex2) {
+    notRecommendedUses.push(uniqueNonRecommendations[fpNonIndex1]);
+    notRecommendedUses.push(uniqueNonRecommendations[fpNonIndex2]);
+  } else {
+    notRecommendedUses.push(uniqueNonRecommendations[fpNonIndex1]);
+  }
+  
+  // Remove duplicates and limit the number of recommendations to avoid overwhelming the UI
+  const uniqueRecommendedUses = [...new Set(recommendedUses)].slice(0, 6);
+  const uniqueNotRecommendedUses = [...new Set(notRecommendedUses)].slice(0, 6);
+  const uniqueFontPairings = [...new Set(fontPairings)].slice(0, 4);
   
   return {
     recommendedUses: uniqueRecommendedUses,
     notRecommendedUses: uniqueNotRecommendedUses,
-    fontPairings
+    fontPairings: uniqueFontPairings
   };
 }
 
@@ -948,4 +1221,260 @@ function determineFontWidth(font) {
     console.error('Error determining font width:', error);
     return 'Normal (5)';
   }
+}
+
+/**
+ * Compares two font files and returns a detailed comparison of their properties
+ * @param {File} primaryFontFile - The primary font file
+ * @param {File} secondaryFontFile - The secondary font file to compare against
+ * @returns {Promise<Object>} - Comparison results between the two fonts
+ */
+export async function compareFonts(primaryFontFile, secondaryFontFile) {
+  try {
+    // Analyze both fonts
+    const primaryFont = await analyzeFontFile(primaryFontFile);
+    const secondaryFont = await analyzeFontFile(secondaryFontFile);
+    
+    // Compare metrics
+    const metricsComparison = {
+      xHeight: {
+        primary: primaryFont.metrics.xHeight,
+        secondary: secondaryFont.metrics.xHeight,
+        difference: calculateDifference(primaryFont.metrics.xHeight, secondaryFont.metrics.xHeight)
+      },
+      capHeight: {
+        primary: primaryFont.metrics.capHeight,
+        secondary: secondaryFont.metrics.capHeight,
+        difference: calculateDifference(primaryFont.metrics.capHeight, secondaryFont.metrics.capHeight)
+      },
+      ascender: {
+        primary: primaryFont.metrics.ascender,
+        secondary: secondaryFont.metrics.ascender,
+        difference: calculateDifference(primaryFont.metrics.ascender, secondaryFont.metrics.ascender)
+      },
+      descender: {
+        primary: primaryFont.metrics.descender,
+        secondary: secondaryFont.metrics.descender,
+        difference: calculateDifference(primaryFont.metrics.descender, secondaryFont.metrics.descender)
+      },
+      contrast: {
+        primary: primaryFont.metrics.contrast,
+        secondary: secondaryFont.metrics.contrast,
+        difference: null // Qualitative comparison
+      },
+      strokeTerminals: {
+        primary: primaryFont.metrics.strokeTerminals,
+        secondary: secondaryFont.metrics.strokeTerminals,
+        difference: null // Qualitative comparison
+      },
+      shape: {
+        primary: primaryFont.metrics.shape,
+        secondary: secondaryFont.metrics.shape,
+        difference: null // Qualitative comparison
+      }
+    };
+    
+    // Compare personality traits
+    const personalityComparison = {
+      formality: {
+        primary: primaryFont.personality.formality,
+        secondary: secondaryFont.personality.formality,
+        difference: primaryFont.personality.formality - secondaryFont.personality.formality
+      },
+      approachability: {
+        primary: primaryFont.personality.approachability,
+        secondary: secondaryFont.personality.approachability,
+        difference: primaryFont.personality.approachability - secondaryFont.personality.approachability
+      },
+      gentleness: {
+        primary: primaryFont.personality.gentleness,
+        secondary: secondaryFont.personality.gentleness,
+        difference: primaryFont.personality.gentleness - secondaryFont.personality.gentleness
+      },
+      sophistication: {
+        primary: primaryFont.personality.sophistication,
+        secondary: secondaryFont.personality.sophistication,
+        difference: primaryFont.personality.sophistication - secondaryFont.personality.sophistication
+      },
+      traditionality: {
+        primary: primaryFont.personality.traditionality,
+        secondary: secondaryFont.personality.traditionality,
+        difference: primaryFont.personality.traditionality - secondaryFont.personality.traditionality
+      },
+      playfulness: {
+        primary: primaryFont.personality.playfulness,
+        secondary: secondaryFont.personality.playfulness,
+        difference: primaryFont.personality.playfulness - secondaryFont.personality.playfulness
+      }
+    };
+    
+    // Compare character sets
+    const characterSetComparison = {
+      latin: compareCharacterSets(primaryFont.characterSet.latin, secondaryFont.characterSet.latin),
+      numerals: compareCharacterSets(primaryFont.characterSet.numerals, secondaryFont.characterSet.numerals),
+      symbols: compareCharacterSets(primaryFont.characterSet.symbols, secondaryFont.characterSet.symbols),
+      punctuation: compareCharacterSets(primaryFont.characterSet.punctuation, secondaryFont.characterSet.punctuation),
+      languages: compareCharacterSets(primaryFont.characterSet.languages, secondaryFont.characterSet.languages)
+    };
+    
+    // Compare general properties
+    const generalComparison = {
+      weight: {
+        primary: primaryFont.weight,
+        secondary: secondaryFont.weight,
+        difference: null // Qualitative comparison
+      },
+      width: {
+        primary: primaryFont.width,
+        secondary: secondaryFont.width,
+        difference: null // Qualitative comparison
+      }
+    };
+    
+    // Generate compatibility score (0-100)
+    const compatibilityScore = calculateCompatibilityScore(primaryFont, secondaryFont);
+    
+    // Generate pairing recommendations
+    const pairingRecommendations = generatePairingRecommendations(primaryFont, secondaryFont);
+    
+    return {
+      primaryFont: {
+        name: primaryFont.name,
+        format: primaryFont.format
+      },
+      secondaryFont: {
+        name: secondaryFont.name,
+        format: secondaryFont.format
+      },
+      metrics: metricsComparison,
+      personality: personalityComparison,
+      characterSet: characterSetComparison,
+      general: generalComparison,
+      compatibilityScore,
+      pairingRecommendations
+    };
+  } catch (error) {
+    console.error('Error comparing fonts:', error);
+    throw new Error(`Font comparison failed: ${error.message}`);
+  }
+}
+
+/**
+ * Calculate the difference between two metric values
+ * @param {string} value1 - First metric value
+ * @param {string} value2 - Second metric value
+ * @returns {string} - Difference description
+ */
+function calculateDifference(value1, value2) {
+  // Extract numeric values if they exist
+  const num1 = parseFloat(value1);
+  const num2 = parseFloat(value2);
+  
+  if (!isNaN(num1) && !isNaN(num2)) {
+    const diff = num1 - num2;
+    const percentage = ((diff / num1) * 100).toFixed(1);
+    return `${Math.abs(percentage)}% ${diff > 0 ? 'larger' : 'smaller'}`;
+  }
+  
+  // For non-numeric values, return a simple comparison
+  return value1 === value2 ? 'Identical' : 'Different';
+}
+
+/**
+ * Compare two character sets and determine differences
+ * @param {string} set1 - First character set description
+ * @param {string} set2 - Second character set description
+ * @returns {Object} - Comparison results
+ */
+function compareCharacterSets(set1, set2) {
+  return {
+    primary: set1,
+    secondary: set2,
+    difference: set1 === set2 ? 'Identical' : 'Different'
+  };
+}
+
+/**
+ * Calculate compatibility score between two fonts
+ * @param {Object} font1 - First font analysis results
+ * @param {Object} font2 - Second font analysis results
+ * @returns {number} - Compatibility score (0-100)
+ */
+function calculateCompatibilityScore(font1, font2) {
+  // Start with a base score
+  let score = 50;
+  
+  // Add points for complementary styles (serif with sans-serif, etc.)
+  if (font1.format !== font2.format) {
+    score += 10;
+  }
+  
+  // Add points for contrasting weights
+  if (font1.weight !== font2.weight) {
+    score += 10;
+  }
+  
+  // Add points for similar x-heights (better alignment)
+  const xHeight1 = parseFloat(font1.metrics.xHeight);
+  const xHeight2 = parseFloat(font2.metrics.xHeight);
+  if (!isNaN(xHeight1) && !isNaN(xHeight2)) {
+    const xHeightDiff = Math.abs(xHeight1 - xHeight2) / Math.max(xHeight1, xHeight2);
+    if (xHeightDiff < 0.1) {
+      score += 15;
+    } else if (xHeightDiff < 0.2) {
+      score += 10;
+    } else if (xHeightDiff < 0.3) {
+      score += 5;
+    }
+  }
+  
+  // Add points for complementary personality traits
+  const formalityDiff = Math.abs(font1.personality.formality - font2.personality.formality);
+  if (formalityDiff > 30) {
+    score += 10;
+  }
+  
+  // Ensure score is within 0-100 range
+  return Math.max(0, Math.min(100, score));
+}
+
+/**
+ * Generate pairing recommendations based on font comparison
+ * @param {Object} font1 - First font analysis results
+ * @param {Object} font2 - Second font analysis results
+ * @returns {Object} - Pairing recommendations
+ */
+function generatePairingRecommendations(font1, font2) {
+  const recommendations = {
+    headingsBody: null,
+    contrastPairing: null,
+    hierarchyPairing: null
+  };
+  
+  // Determine which font is better for headings vs body text
+  if (font1.weight === 'Bold' || font1.weight === 'Heavy' || font1.weight === 'Black') {
+    recommendations.headingsBody = `${font1.name} for headings, ${font2.name} for body text`;
+  } else if (font2.weight === 'Bold' || font2.weight === 'Heavy' || font2.weight === 'Black') {
+    recommendations.headingsBody = `${font2.name} for headings, ${font1.name} for body text`;
+  } else if (font1.personality.formality > font2.personality.formality) {
+    recommendations.headingsBody = `${font1.name} for headings, ${font2.name} for body text`;
+  } else {
+    recommendations.headingsBody = `${font2.name} for headings, ${font1.name} for body text`;
+  }
+  
+  // Determine contrast pairing
+  if (font1.metrics.contrast !== font2.metrics.contrast) {
+    recommendations.contrastPairing = `Good contrast between ${font1.name} and ${font2.name} creates visual interest`;
+  } else {
+    recommendations.contrastPairing = `Similar contrast levels may create a more unified look`;
+  }
+  
+  // Determine hierarchy pairing
+  if (Math.abs(font1.personality.formality - font2.personality.formality) > 30) {
+    recommendations.hierarchyPairing = `Strong personality difference creates clear hierarchy`;
+  } else {
+    recommendations.hierarchyPairing = `Similar personalities create a harmonious design`;
+  }
+  
+  return recommendations;
 } 

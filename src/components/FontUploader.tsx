@@ -44,26 +44,25 @@ const FontUploader = () => {
     
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
-      // If it's a single file or we're not in directory mode
-      if (files.length === 1 && !isDirectoryMode) {
-        validateAndSetFile(files[0]);
-      } else {
-        // For now, we still only support one file in the context
-        // So we'll just use the first valid font file
-        for (let i = 0; i < files.length; i++) {
-          const file = files[i];
-          const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
-          const validFormats = ['.ttf', '.otf', '.woff', '.woff2'];
-          
-          if (validFormats.includes(fileExtension)) {
-            validateAndSetFile(file);
-            break;
-          }
-        }
+      // Process the dropped files regardless of directory mode
+      let foundValidFile = false;
+      
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+        const validFormats = ['.ttf', '.otf', '.woff', '.woff2'];
         
-        if (files.length > 1) {
-          toast.info(`Multiple files detected. Only the first valid font file will be used.`);
+        if (validFormats.includes(fileExtension)) {
+          validateAndSetFile(file);
+          foundValidFile = true;
+          break;
         }
+      }
+      
+      if (!foundValidFile) {
+        toast.error("No valid font files found. Please upload TTF, OTF, WOFF, or WOFF2 files.");
+      } else if (files.length > 1) {
+        toast.info(`Multiple files detected. Only the first valid font file will be used.`);
       }
     }
   };
